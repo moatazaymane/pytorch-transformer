@@ -13,7 +13,7 @@ The position of words is inherently encoded in the architecture of sequence mode
 
 
 <div align="center">
-    <img src="images/pos_encoding.png" width=220 height=300 alt="positional encoding - original transformer">
+    <img src="images/pos_encoding.PNG" width=220 height=300 alt="positional encoding - original transformer">
 </div>
 
 The position of words is an important piece of information for a language model, as the same word can have a different meaning depending on its position in the sequence; the meaning of the entire phrase can change if this information is not encoded in the model
