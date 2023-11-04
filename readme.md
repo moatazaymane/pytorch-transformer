@@ -7,7 +7,11 @@ The Attention mechanism was introduced to make these sequence models more robust
 The transformer was first introduced in 2017 in the paper (attention is all you need). Replacing the sequence modeling completely by the multi-head self attention mechanism.
 
 
-# Positional Encodings
+# Input Embedding 
+
+Yhe input Embedding is composed of a learned (initialized as a one hot mapping words to the vocabulary) and fixed term (positional encoding). Dropout is also applied to the resulting sum of the two vectors.
+
+## Positional Encodings
 
 The position of words is inherently encoded in the architecture of sequence models since the computation is done in time steps.
 
@@ -40,10 +44,46 @@ The authors of the original paper stated that the sinusoidal(fixed) way of encod
 
 It was also hypothesized that the positional encodings also allow the model to learn to attend by relative position.(phase shifting is used to evaluate the model's ability in recognizing relative positions, MLMs using APES(absolute positional embeddings) perform poorly on phase shifting tasks))
 
-In fact $pos_{i+k}$ can be represented linearily with $pos_i$ independentely of the time step ($pos_{i+k} = D^k.pos_i$ Where $D^k$ is a block diagonal matrix composed of $d_{model/2}$ transposed rotation matrices of size 2x2).
+In fact $pos_{i+k}$ can be represented linearly with $pos_i$ independently of the time step ($pos_{i+k} = D^k.pos_i$ Where $D^k$ is a block diagonal matrix composed of $d_{model/2}$ transposed rotation matrices of size 2x2).
 
 the distance between neighboring time-steps and changes nicely with time. Here is an illustration from the tensorflow official impelmentation
 
 <div align="center">
     <img src="images/dot_prod.png" alt="Dot product between positional encoding 1000 and all the other time steps">
 </div>
+
+
+# Layer and Norm:
+
+<div align="center">
+    <img src="images/LN_BN.PNG" width=220 height=150 alt="Layer normalization compared to batch normalization">
+</div>
+
+the above picture taken from this [article](https://proceedings.mlr.press/v119/shen20e/shen20e.pdf) compares batch normalization (calculates statistics across batches of examples and typically used in computer vision)
+to layer normalization used in the transformer architecture. This la introduces learnable parameters that can amplify values along the feature dimension
+
+
+# Multi-head attention:
+
+## Encoder
+
+The output of the input embedding layer added to the sinusoidal positional encodings enter a skip connection module, that outputs the original features along with multi head attention output.
+
+<div align="center">
+    <img src="images/multi_head_attention.PNG" width=420 height=250 alt="Multi Head attention block">
+</div>
+
+the encoder mask, is used to mask the padding tokens
+
+## Decoder (masked self-attention)
+
+the decoder is used as an autoregressive module and each token will only attend to previous tokens in the sentence
+
+### Visualisation of the maps after training GPT1
+
+# Cross-Attention (decoder) (original-transformer)
+
+In this module the keys and the values come from the encoder output and the values come from the decoder.
+
+
+This allows to visualize the cross-attention maps between the input words in English and the target words in French
