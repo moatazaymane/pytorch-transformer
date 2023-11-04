@@ -4,6 +4,8 @@ from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import Whitespace
+from datasets import load_dataset
+import re
 # from torcheval.metrics import Perplexity
 from random import randint
 import os
@@ -21,16 +23,25 @@ def write_msg(msg, iterator):
     return
 
 
-def get_next_token_greedy(gpt_model, inp, mask):
+def get_next_token_greedy(gpt_model, inp, mask, device):
 
     inp = inp.to(dtype=torch.int64)
     mask = mask.to(dtype=torch.int64)
-    next_token_probabilities = gpt_model.forward(inp, mask)
+    next_token_probabilities = gpt_model.forward(inp.to(device), mask.to(device))
     _, next_token = torch.max(next_token_probabilities, dim=1)
     return next_token[-1]
 
 
-def validate(gpt_model, dataloader_val, tokenizer, write, iterator):
+def get_next_token_greedy(gpt_model, inp, mask, device):
+
+    inp = inp.to(dtype=torch.int64)
+    mask = mask.to(dtype=torch.int64)
+    next_token_probabilities = gpt_model.forward(inp.to(device), mask.to(device))
+    _, next_token = torch.max(next_token_probabilities, dim=2)
+    return next_token
+
+
+def validate(gpt_model, dataloader_val, tokenizer, write, iterator, device):
 
     gpt_model.eval()
     y_true, yhat = [], []
@@ -39,22 +50,21 @@ def validate(gpt_model, dataloader_val, tokenizer, write, iterator):
 
     with torch.no_grad():
         for batch in dataloader_val:
-            inp = batch['input']
-            mask = batch['mask']
+            inp = batch['input'].to(device)
+            mask = batch['mask'].to(device)
             yt = batch['next_token']
-            yh = get_next_token_greedy(gpt_model, inp, mask)
-            yh = yh[-1]
+            yh = get_next_token_greedy(gpt_model, inp, mask, device)
+            print(f"id of target {batch['next_token']}")
+            target_text = tokenizer.decode([yt])
+            predicted_text = tokenizer.decode([yh[0][0].detach().cpu().tolist()])
             y_true.append(yt)
-            yhat.append(yh)
+            yhat.append(yh[0][0])
 
             logger.debug(f"this is ytrue {yt}")
 
-            target_token = yt
-            predicted_token = yh
-
             write('--' * console_width, iterator=iterator)
-            write(f"Target token {target_token}", iterator=iterator)
-            write(f"Predicted token {predicted_token}", iterator=iterator)
+            write(f"Target token {target_text}", iterator=iterator)
+            write(f"Predicted token {predicted_text}", iterator=iterator)
 
         correct_predictions = 0
         logger.debug(f"yhat is {yhat}")
@@ -66,7 +76,60 @@ def validate(gpt_model, dataloader_val, tokenizer, write, iterator):
         write(f"Next token prediction accuracy {correct_predictions/len(y_true):02f}", iterator=iterator)
 
 
-def get_data():
+def get_data_opus():
+    all_ds = load_dataset("opus_books", f"en-fr")
+    all_ds = all_ds['train']
+
+    sentences_ds = []
+    for el in all_ds:
+        if len(el['translation']["en"].split(" ")) > 2:
+            sentences_ds.append(el['translation']["en"])
+
+    punc = '''!()-[]{};:'"\,<>./?@#$%^&*_~1234567890'''
+
+    for i in range(len(sentences_ds)):
+        phrase = sentences_ds[i]
+
+        for cr in punc:
+            if cr in phrase:
+                phrase = phrase.replace(cr, "")
+                phrase = re.sub('\s+', ' ', phrase)
+                sentences_ds[i] = phrase
+
+    # training Tokenizer from available sentences
+    if not os.path.isfile("tokenizer/gpt_tokenizer_1"):
+        tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
+        trainer = WordLevelTrainer(show_progress=True, special_tokens=["[UNK]", "[PAD]"],
+                                   min_frequency=2)
+        tokenizer.pre_tokenizer = Whitespace()
+        logger.info(f"Training tokenizer: {tokenizer_name}")
+        tokenizer.train_from_iterator(sentences_ds, trainer=trainer)
+        logger.info(f"Saving tokenizer to path: {tokenizer_path}")
+        tokenizer.save("tokenizer/gpt_tokenizer_1")
+
+    logger.info(f"Loading tokenizers from path: {tokenizer_path}")
+    tokenizer = Tokenizer.from_file("tokenizer/gpt_tokenizer_1")
+
+    max_len = 0
+    ds = []
+    for sentence in sentences_ds:
+        enc = tokenizer.encode(sentence).ids
+        if len(enc) > context_size:
+            k = len(enc) // context_size
+
+            for i in range(k):
+                ds.append(tokenizer.decode(enc[i * context_size:(i + 1) * context_size]))
+
+        else:
+            ds.append(sentence)
+
+    logger.info(f"max token length in data is {max_len}")
+
+    train_ds_, val_ds_ = ds[:int(train_size * len(sentences_ds))], sentences_ds[int(train_size * len(sentences_ds)):]
+
+    return train_ds_, val_ds_, tokenizer
+
+def get_data_random_books():
 
     #  Preparing the dataset (text file with books)
     with open('GPT_1/books/gpt_training.txt', 'r', encoding="utf8") as file:
@@ -117,7 +180,9 @@ def get_data():
 
 def train():
 
-    train_ds_, val_ds_, tokenizer = get_data()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    train_ds_, val_ds_, tokenizer = get_data_opus()
 
     train_ds = GPTDataset(tokenizer, train_ds_, context_size)
     val_ds = GPTDataset(tokenizer, val_ds_, context_size)
@@ -126,7 +191,7 @@ def train():
     val_dataloader = DataLoader(batch_size=val_batch_size, dataset=val_ds)
 
     gpt_model = Instantiate_GPT(width=width, context_size=context_size, vocab_size=tokenizer.get_vocab_size(), h=h,
-                                hidden=hidden, Nx=Nx, dropout=0.1)
+                                hidden=hidden, Nx=Nx, dropout=0.1).to(device)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

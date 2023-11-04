@@ -15,8 +15,7 @@ class GPTDataset(Dataset):
 
     def __getitem__(self, item_idx):
         item_list = self.ds[item_idx]
-        text = " ".join(item_list)
-        tokens = self.tokenizer.encode(text).ids
+        tokens = self.tokenizer.encode(item_list).ids
         # truncate sentence to fin in the context size
         if self.context_size - len(tokens) + 1 < 0:
             tokens = tokens[0:self.context_size + 1]
@@ -26,15 +25,17 @@ class GPTDataset(Dataset):
              torch.tensor([self.pad]*(self.context_size - len(tokens) + 1))]
         )
         target = torch.cat(
-            [torch.tensor(tokens[1:], dtype=torch.int64),
-             torch.tensor([self.pad]*(self.context_size - len(tokens) + 1))]
+             [torch.tensor([tokens[-1]], dtype=torch.int64).reshape(1),
+             torch.tensor([self.pad]*(self.context_size - 1))]
         )
 
         input_mask = torch.triu(torch.ones(1, inputs.size(0), inputs.size(0)), diagonal=1)
+        inputs = inputs.to(dtype=torch.int64)
 
         return {
             "input": inputs,
             "target": target,
             "mask": input_mask,
-            "next_token": tokens[-1]
+            "next_token": tokens[-1],
+            "sentence": item_list
         }
