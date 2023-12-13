@@ -17,20 +17,29 @@ class GPTDataset(Dataset):
         item_list = self.ds[item_idx]
         tokens = self.tokenizer.encode(item_list).ids
         # truncate sentence to fin in the context size
-        if self.context_size - len(tokens) + 1 < 0:
-            tokens = tokens[0:self.context_size + 1]
 
-        inputs = torch.cat(
-            [torch.tensor(tokens[:-1], dtype=torch.int64),
-             torch.tensor([self.pad]*(self.context_size - len(tokens) + 1))]
-        )
-        target = torch.cat(
-             [torch.tensor([tokens[-1]], dtype=torch.int64).reshape(1),
-             torch.tensor([self.pad]*(self.context_size - 1))]
-        )
+        if len(tokens) <= self.context_size:
+            inputs = torch.cat(
+                [torch.tensor(tokens[:-1], dtype=torch.int64),
+                 torch.tensor([self.pad] * (self.context_size - len(tokens[:-1])))]
+            )
+
+            target = torch.cat(
+                [torch.tensor(tokens[1:], dtype=torch.int64),
+                 torch.tensor([self.pad] * (self.context_size - len(tokens[1:])))]
+            )
+
+        else:
+
+            inputs = torch.tensor(tokens[-self.context_size - 1:-1], dtype=torch.int64)
+
+            target = torch.tensor(tokens[-self.context_size:], dtype=torch.int64)
 
         input_mask = torch.triu(torch.ones(1, inputs.size(0), inputs.size(0)), diagonal=1)
         inputs = inputs.to(dtype=torch.int64)
+        target = target.to(dtype=torch.int64)
+
+        assert target.shape == inputs.shape
 
         return {
             "input": inputs,

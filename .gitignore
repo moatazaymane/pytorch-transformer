@@ -1,0 +1,12 @@
+GPT_1/books/gpt_training.txt
+GPT_1/tokenize/gpt_tokenizer_1
+GPT_1/Dataset/__pycache__/*
+GPT_1/utils/__pycache__/*
+GPT_1/__pycache__/*
+GPT_1/books/*
+transformer_1
+en-fr.csv
+sample.csv
+t_tokenize_1en
+t_tokenizer_1fr
+weights/*
