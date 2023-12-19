@@ -70,6 +70,10 @@ The model was trained on a dataset of sentences to predict the next token, it ac
 
 ## Decoder Attention:
 
+<div align="center">
+    <img src="images/multi_head_attention.PNG" width=420 height=250 alt="Multi Head attention block">
+</div>
+
 After training the model for the next prediction task, the learned weights can be used to compute attention maps for query sentences, which can be interpreted in the case of a decoder based model such as gpt as scores highliting the masked inter-token attention mechanism. A given token is strongly influenced (attends to a previous token) if the attention score of the pair is high.
 
 
@@ -83,12 +87,6 @@ The result of the linear transformation of the input sentence by $(W_Q, W_K)$ Q 
 
 This results in different feature maps that can each be interpreted as reflecting the learned relations by each part of the token representation.
 
-
-<div align="center">
-    <img src="images/multi_head_attention.PNG" width=420 height=250 alt="Multi Head attention block">
-</div>
-
-the encoder mask, is used to mask the padding tokens
 
 ### Attention Maps example
 
