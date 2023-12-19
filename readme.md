@@ -53,7 +53,7 @@ the distance between neighboring time-steps and changes nicely with time. Here i
 </div>
 
 
-# Layer and Norm:
+### Layer and Norm:
 
 <div align="center">
     <img src="images/LN_BN.PNG" width=220 height=150 alt="Layer normalization compared to batch normalization">
@@ -63,9 +63,26 @@ the above picture taken from this [article](https://proceedings.mlr.press/v119/s
 to layer normalization used in the transformer architecture. This la introduces learnable parameters that can amplify values along the feature dimension
 
 
-# Multi-head attention:
+# Training phase:
 
-## Encoder
+
+The model was trained on a dataset of sentences to predict the next token, it achieved top one next token prediction accuracy of 22%, the vocabulary contains 30 000 tokens.
+
+## Decoder Attention:
+
+After training the model for the next prediction task, the learned weights can be used to compute attention maps for query sentences, which can be interpreted in the case of a decoder based model such as gpt as scores highliting the masked inter-token attention mechanism. A given token is strongly influenced (attends to a previous token) if the attention score of the pair is high.
+
+
+For a given input sentence projected into the input space of the gpt model $(sequence length, 512)$, we can compute the attention scores defined by:
+
+$Attention(Q, K) = softmax(QK^T)/\sqrt(d_k)$
+
+Where Q, and K are the result of of a linear transformation of the query by the weight matrices $(W_Q, W_K)$ learned during training.
+
+The result of the linear transformation of the input sentence by $(W_Q, W_K)$ Q and K is of size $(sequence length, dmodel)$ is split into h different matrices $(sequence length, dh)$ before the attention scores are computed.
+
+This results in different feature maps that can each be interpreted as reflecting the learned relations by each part of the token representation.
+
 
 The output of the input embedding layer added to the sinusoidal positional encodings enter a skip connection module, that outputs the original features along with multi head attention output.
 
@@ -75,15 +92,13 @@ The output of the input embedding layer added to the sinusoidal positional encod
 
 the encoder mask, is used to mask the padding tokens
 
-## Decoder (masked self-attention)
+### Attention Maps example
 
-the decoder is used as an autoregressive module and each token will only attend to previous tokens in the sentence
+For an input sentence : she ran to the bus at the end of the, we can see the different attention maps highlighting the scores.
 
-### Visualisation of the maps after training GPT1
-
-# Cross-Attention (decoder) (original-transformer)
-
-In this module the keys and the values come from the encoder output and the values come from the decoder.
-
-
-This allows to visualize the cross-attention maps between the input words in English and the target words in French
+<div align="left">
+    <img src="images/Masked_Attention_Heatmap_1.png" width=220 height=150 alt="Layer normalization compared to batch normalization">
+    <img src="images/Masked_Attention_Heatmap_2.png" width=220 height=150 alt="Layer normalization compared to batch normalization">
+    <img src="images/Masked_Attention_Heatmap_3.png" width=220 height=150 alt="Layer normalization compared to batch normalization">
+    <img src="images/Masked_Attention_Heatmap_4.png" width=220 height=150 alt="Layer normalization compared to batch normalization">
+</div>

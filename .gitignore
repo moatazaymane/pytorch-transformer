@@ -10,3 +10,4 @@ sample.csv
 t_tokenize_1en
 t_tokenizer_1fr
 weights/*
+Model/*
