@@ -84,8 +84,6 @@ The result of the linear transformation of the input sentence by $(W_Q, W_K)$ Q 
 This results in different feature maps that can each be interpreted as reflecting the learned relations by each part of the token representation.
 
 
-The output of the input embedding layer added to the sinusoidal positional encodings enter a skip connection module, that outputs the original features along with multi head attention output.
-
 <div align="center">
     <img src="images/multi_head_attention.PNG" width=420 height=250 alt="Multi Head attention block">
 </div>
